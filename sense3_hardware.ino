@@ -44,12 +44,12 @@ void loop() {
     Wire.write(byte(DISTANCE_REGISTER_ADDRESS));
     Wire.endTransmission();
 
-  Wire.requestFrom(GP2Y0E03_SENSOR_ADDRESS, 2);
+    Wire.requestFrom(GP2Y0E03_SENSOR_ADDRESS, 2);
 
   if (2 <= Wire.available())
   {
-    raw_distance_array[0] = Wire.read(); //upper 8 bits
-    raw_distance_array[1] = Wire.read(); //lower 8 bits
+    raw_distance_array[0] = Wire.read(); //upper 8 bits of data
+    raw_distance_array[1] = Wire.read(); //lower 8 bits of data
     byte new_lower_distance=0;
 
     for(int i=7;i>3;i--){
@@ -59,15 +59,24 @@ void loop() {
     
     distance_in_cm=((raw_distance_array[0]<<4)|new_lower_distance)/16/(int)pow(2,shift); //formula from https://www.digikey.co.th/htmldatasheets/production/1568259/0/0/1/gp2y0e03-specification.html
 
-    sprintf(string_buffer, "Distance of %u cm", distance_in_cm);
-    Serial.println(string_buffer);
+      if(distance_in_cm>50||distance_in_cm<4){
+      Serial.println("Out of bounds");
+      }
+      
+      else{
+      sprintf(string_buffer, "Distance of %u cm", distance_in_cm);
+      Serial.println(string_buffer);
+      }
+    
+    
   }
+  
   else
   {
     Serial.println("Reading error from distance register");
     //stop();
   }
-  delay(1000);
+  delay(2000); //delay before next reading
 
 }
 
