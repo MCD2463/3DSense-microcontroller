@@ -10,10 +10,26 @@ byte raw_distance_array[2]={0};
 byte distance_in_cm=0;
 char string_buffer[100];
 volatile int stopFlag;
+// long distance_count=0;
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
+  setup_IR_sensor();
+    
+
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+    IR_sensor_actions();
+
+}
+
+
+void setup_IR_sensor(){
+    
   Wire.begin(); //initialyze I2C bus
 
   delay(2000);
@@ -33,14 +49,10 @@ void setup() {
     Serial.println("Reading error from shift bit register");
     //stop(); 
   }
-    
-
-
 }
 
-void loop() {
-  // put your main code here, to run repeatedly:
-    Wire.beginTransmission(GP2Y0E03_SENSOR_ADDRESS);
+void IR_sensor_actions(){
+  Wire.beginTransmission(GP2Y0E03_SENSOR_ADDRESS);
     Wire.write(byte(DISTANCE_REGISTER_ADDRESS));
     Wire.endTransmission();
 
@@ -76,8 +88,10 @@ void loop() {
     Serial.println("Reading error from distance register");
     //stop();
   }
-  delay(2000); //delay before next reading
 
+  // distance_count++;
+  // Serial.println(distance_count);
+  delay(2000); //delay before next reading
 }
 
 void stop(){
