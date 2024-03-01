@@ -10,11 +10,14 @@ byte raw_distance_array[2]={0};
 byte distance_in_cm=0;
 char string_buffer[100];
 volatile int stopFlag;
-// long distance_count=0;
+byte previous_distance=0;
+long same_distance_count=0;
+//unsigned long previous_time=0;
+//const unsigned long time_interval=40000; //interval of 40 seconds before seing if idle allert is ent or not
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(115200);
+  Serial.begin(9600);
   setup_IR_sensor();
     
 
@@ -23,7 +26,27 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
+    unsigned long current_time=millis();
+    previous_distance=distance_in_cm;
     IR_sensor_actions();
+    if(previous_distance==distance_in_cm){
+      same_distance_count++; //records number of times the distance did not change between readings
+    }                       //relevent when it gets to 20, since there are around 20 readings in 40 seconds since there is a reading every 2 seconds
+    else{
+      same_distance_count=0; //when the distance changes, the counter is reset
+    }
+    
+    if(same_distance_count>=20UL){
+      Serial.println("Printer is idle"); //where we send notification to database that printer is idle
+      
+      // Serial.print("Printing time: ");
+      // Serial.print(current_time/1000UL);
+      // Serial.println(" secounds");
+
+    }
+    else{
+      Serial.println("Printer is still running");
+    }
 
 }
 
