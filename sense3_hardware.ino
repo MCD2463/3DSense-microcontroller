@@ -2,7 +2,6 @@
 #include <Wire.h>
 #include "WiFiProv.h"
 
-
 #if defined(ESP32)
   #include <WiFi.h>
 #elif defined(ESP8266)
@@ -15,6 +14,10 @@
 //Provide the RTDB payload printing info and other helper functions.
 #include "addons/RTDBHelper.h"
 
+/************Printer Identification*************/
+#define printerId "1"
+#define username "ayoubkx"
+#define printerName "test"
 /************Variables for Wifi Provisioning*************/
 // #define USE_SOFT_AP // Uncomment if you want to enforce using Soft AP method instead of BLE
 
@@ -25,28 +28,20 @@ bool reset_provisioned = true; // When true the library will automatically delet
 bool wifi_connected=false; // When false, the program does no proceed 
 
 /************Variables for IR sensor*************/
-#define GP2Y0E03_SENSOR_ADDRESS 0x40 // found with a wire scan
-                           // registers adresses  and formula to get distance in cm found on https://www.digikey.co.th/htmldatasheets/production/1568259/0/0/1/gp2y0e03-specification.html
-#define DISTANCE_REGISTER_ADDRESS 0x5E // starting register address containing raw data of distance that take 2 bytes of space 
-#define SHIFT_BIT_REGISTER_ADDRESS 0x35 // register address containing coefficient n found in formula
 
-byte shift=0;
-byte raw_distance_array[2]={0};
-byte distance_in_cm=0;
+const int sensorPin = 34;
+
 char string_buffer[100];
-volatile int stopFlag;
-byte previous_distance=0;
+int previous_distance=0;
+int calibrated_distance=0;
 long same_distance_count=0;
-long distance_error_count=0; //to be sure that there are no Reading error from distance register before sending idle signal
-//unsigned long previous_time=0;
-//const unsigned long time_interval=40000; //interval of 40 seconds before seing if idle allert is ent or not
 
 /************Variables for Firebase*************/
 // Insert Firebase project API Key
-#define API_KEY "AIzaSyBOBl-OiKnSTJHiV2cohByZnJ7xvj5QU7o"
+#define API_KEY "AIzaSyAIfgpLG4aHalsMipBkazJE14G4_-K66LI"
 
 // Insert RTDB URLefine the RTDB URL */
-#define DATABASE_URL "https://dsensetest-default-rtdb.firebaseio.com/" 
+#define DATABASE_URL "https://dsense-8baa5-default-rtdb.firebaseio.com/" 
 
 //Define Firebase Data object
 FirebaseData fbdo;
@@ -59,43 +54,43 @@ bool signupOK = false;
 
 void setup() {
   // put your setup code here, to run once:
-  Wire.begin(); //initialyze I2C bus
-  delay(1000);
   Serial.begin(115200);
   Wifi_Prov_setup(); //WIFI provisioning set up
   while (!wifi_connected){
     Serial.print(".");
     delay(300);
   }
-  setup_IR_sensor();
+  pinMode(sensorPin, INPUT); //set up for IR sensor readings
   Firebase_setup();
-    
-
-
+  Firebase.RTDB.setString(&fbdo, "printers/test/printerId", printerId);
+  Firebase.RTDB.setString(&fbdo, "printers/test/username", username);
+  Firebase.RTDB.setString(&fbdo, "printers/test/printerName", printerName);  
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-    previous_distance=distance_in_cm;
+    previous_distance=calibrated_distance;
     IR_sensor_actions();
     
     
     
-    if(previous_distance==distance_in_cm){
+ if(previous_distance==calibrated_distance||previous_distance-2<=calibrated_distance&&calibrated_distance<=previous_distance+2){ //take into account incertitude
       same_distance_count++; //records number of times the distance did not change between readings
-    }                       //relevent when it gets to 58, since there are around 58 readings in 40 seconds since there is a reading every 700 milliseconds
+    }                       //relevent when it gets to 20, since there are around 20 readings in 40 seconds since there is a reading every 2 seconds
     else{
       same_distance_count=0; //when the distance changes, the counter is reset
     }
+
+    Serial.println(same_distance_count);
     
-    if(same_distance_count>=58UL&&distance_error_count==0){
-      char status[]="Printer is idle";
+    if(same_distance_count>=20UL){                                      
+      char status[]="idle";
       Serial.println(status); 
       
       if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 5000 || sendDataPrevMillis == 0)){ //where we send notification to database that printer is idle each 5 seconds
               sendDataPrevMillis = millis();
             // Write an Int number on the database path test/int
-          if (Firebase.RTDB.setString(&fbdo, "test/String", status)){
+          if (Firebase.RTDB.setString(&fbdo, "printers/test/status", status)){
             Serial.println("PASSED");
             Serial.println("PATH: " + fbdo.dataPath());
             Serial.println("TYPE: " + fbdo.dataType());
@@ -105,20 +100,15 @@ void loop() {
             Serial.println("REASON: " + fbdo.errorReason());
           }
       }
-      // Serial.print("Printing time: ");
-      // Serial.print(current_time/1000UL);
-      // Serial.println(" secounds");
-
     }
     else{
-          
-            char status[]="Printer is still running";
+            char status[]="running";
             Serial.println(status); 
 
             if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 5000 || sendDataPrevMillis == 0)){ //where we send notification to database that printer is running each 5 seconds
               sendDataPrevMillis = millis();
             // Write an Int number on the database path test/int
-          if (Firebase.RTDB.setString(&fbdo, "test/String", status)){
+          if (Firebase.RTDB.setString(&fbdo, "printers/test/status", status)){
             Serial.println("PASSED");
             Serial.println("PATH: " + fbdo.dataPath());
             Serial.println("TYPE: " + fbdo.dataType());
@@ -129,82 +119,20 @@ void loop() {
           }
       }
     }
-
-   
-
 }
 
 
-void setup_IR_sensor(){
-  
-  Wire.beginTransmission(GP2Y0E03_SENSOR_ADDRESS); //starting communication with sensor
-  Wire.write(byte(SHIFT_BIT_REGISTER_ADDRESS)); //writing data from bit shift register
-  Wire.endTransmission();
 
-  Wire.requestFrom(GP2Y0E03_SENSOR_ADDRESS, 1); //ESP32 requests the 1 byte from bit shift register
-  
-  if (1 <= Wire.available())
-  {
-    shift = Wire.read(); //store data from bit shift register
-  }
-  else{
-    Serial.println("Reading error from shift bit register");
-    //stop(); 
-  }
-  delay(1000);
-}
 
 void IR_sensor_actions(){
-    int return_value;
-    Wire.beginTransmission(GP2Y0E03_SENSOR_ADDRESS);
-    Wire.write(byte(DISTANCE_REGISTER_ADDRESS));
-    return_value=Wire.endTransmission();
-    delay(200);
-
-    Serial.println(return_value);//test to see value of end transmission
-
-  if (return_value==0)
-  {
-    Wire.requestFrom(GP2Y0E03_SENSOR_ADDRESS, 2);
-    raw_distance_array[0] = Wire.read(); //upper 8 bits of data
-    raw_distance_array[1] = Wire.read(); //lower 8 bits of data
-    byte new_lower_distance=0;
-
-    for(int i=7;i>3;i--){
-      new_lower_distance=bitClear(raw_distance_array[1],i); //clear the 4 most significant bit since according to the formula, only the 4 least significant bit are kept
-    }
-
-    
-    distance_in_cm=((raw_distance_array[0]<<4)|new_lower_distance)/16/(int)pow(2,shift); //formula from https://www.digikey.co.th/htmldatasheets/production/1568259/0/0/1/gp2y0e03-specification.html
-
-      if(distance_in_cm>50||distance_in_cm<4){
-      Serial.println("Out of bounds");
-      }
-      
-      else{
-      sprintf(string_buffer, "Distance of %u cm", distance_in_cm);
-      Serial.println(string_buffer);
-      distance_error_count=0;
-      }
-    
-    
-  }
-  
-  else
-  {
-    Serial.println("Reading error from distance register");
-    distance_error_count++;
-    //stop();
-  }
-
-
-  delay(500); //delay before next reading
+ int raw = analogRead(sensorPin);
+    calibrated_distance = (69.0 - ((float)raw * 0.0226));
+    sprintf(string_buffer, "Distance of %u cm", calibrated_distance);
+    Serial.println(string_buffer);  
+    delay(1000);
 }
 
-void stop(){
-  stopFlag=1;
-  while(stopFlag);
-}
+
 
 void SysProvEvent(arduino_event_t *sys_event) //function needed for WIfiProv
 {
