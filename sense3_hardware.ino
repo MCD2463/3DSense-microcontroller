@@ -46,7 +46,8 @@ long error_count=0;
 
 //Define Firebase Data object
 FirebaseData fbdo;
-  String uniqueKey = "-NtmTTJj0lChTWqPl5Ak";
+  
+String uniqueKey = "-NtmTTJj0lChTWqPl5Ak";
 
 FirebaseAuth auth;
 FirebaseConfig config;
@@ -84,19 +85,20 @@ void loop() {
     
     
     
- if(previous_distance==calibrated_distance||previous_distance-2<=calibrated_distance&&calibrated_distance<=previous_distance+2){ //take into account incertitude
+ if(previous_distance==calibrated_distance||previous_distance-3<=calibrated_distance&&calibrated_distance<=previous_distance+3||calibrated_distance==69){ //take into account incertitude 
       same_distance_count++; //records number of times the distance did not change between readings
-      error_count=0;
+      if(calibrated_distance==69){
+        error_count++;
+          if(error_count<=5){
+              Serial.println("No issue for now");
+          }
+          else{
+            Serial.println("Reading error");
+          }
+  } 
+      
   }                       //relevent when it gets to 20, since there are around 20 readings in 40 seconds since there is a reading every 2 seconds
-  else if(calibrated_distance==69){
-      error_count++;
-      if(error_count<=5){
-        Serial.println("No issue for now");
-      }
-      else{
-        Serial.println("Reading error");
-      }
-  }  
+ 
     else{
       same_distance_count=0; //when the distance changes, the counter is reset
       error_count=0;
