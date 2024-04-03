@@ -15,7 +15,7 @@
 #include "addons/RTDBHelper.h"
 
 /************Printer Identification*************/
-#define printerId "1"
+#define printerId "123X456"
 #define username "ayoubkx" //to change to a default value
 #define printerName "test" ////to change to a default value
 /************Variables for Wifi Provisioning*************/
