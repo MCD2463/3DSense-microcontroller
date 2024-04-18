@@ -15,9 +15,9 @@
 #include "addons/RTDBHelper.h"
 
 /************Printer Identification*************/
-#define printerId "1"
-#define username "ayoubkx" //to change to a default value
-#define printerName "test" ////to change to a default value
+#define printerId "123X456"
+#define username "0" //changed to appear as a default NULL value in the database
+#define printerName "0" //changed to appear as a default NULL value in the database
 /************Variables for Wifi Provisioning*************/
 // #define USE_SOFT_AP // Uncomment if you want to enforce using Soft AP method instead of BLE
 
@@ -70,12 +70,6 @@ void setup() {
 Firebase.RTDB.setString(&fbdo, "printers/" + uniqueKey + "/printerId", printerId);
 Firebase.RTDB.setString(&fbdo, "printers/" + uniqueKey + "/username", username);
 Firebase.RTDB.setString(&fbdo, "printers/" + uniqueKey + "/printerName", printerName);
-  
-  
-  
-  // Firebase.RTDB.setString(&fbdo, "printers/test/printerId", printerId);
-  // Firebase.RTDB.setString(&fbdo, "printers/test/username", username);
-  // Firebase.RTDB.setString(&fbdo, "printers/test/printerName", printerName);  
 }
 
 void loop() {
@@ -85,7 +79,7 @@ void loop() {
     
     
     
- if(previous_distance==calibrated_distance||previous_distance-3<=calibrated_distance&&calibrated_distance<=previous_distance+3||calibrated_distance==69){ //take into account incertitude 
+ if(previous_distance==calibrated_distance||previous_distance-1<=calibrated_distance&&calibrated_distance<=previous_distance+1||calibrated_distance==69){ //take into account incertitude 
       same_distance_count++; //records number of times the distance did not change between readings
       if(calibrated_distance==69){
         error_count++;
