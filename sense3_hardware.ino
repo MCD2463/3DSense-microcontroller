@@ -39,10 +39,10 @@ long error_count=0;
 
 /************Variables for Firebase*************/
 // Insert Firebase project API Key
-#define API_KEY "" // add Firebase API key here between the quotations
+#define API_KEY "" // add Firebase API key here between the quotation marks
 
 // Insert RTDB URLefine the RTDB URL */
-#define DATABASE_URL "" // add Firebase database URL here between the quotations
+#define DATABASE_URL "" // add Firebase database URL here between the quotation marks
 
 //Define Firebase Data object
 FirebaseData fbdo;
