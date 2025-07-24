@@ -39,10 +39,10 @@ long error_count=0;
 
 /************Variables for Firebase*************/
 // Insert Firebase project API Key
-#define API_KEY "AIzaSyAIfgpLG4aHalsMipBkazJE14G4_-K66LI"
+#define API_KEY ""
 
 // Insert RTDB URLefine the RTDB URL */
-#define DATABASE_URL "https://dsense-8baa5-default-rtdb.firebaseio.com/" 
+#define DATABASE_URL "" 
 
 //Define Firebase Data object
 FirebaseData fbdo;
